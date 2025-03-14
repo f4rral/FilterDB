@@ -1,11 +1,13 @@
 package com.example.filterdb.data
 
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 
 class ProductRepository(private val productDao: ProductDao) {
     fun getFilteredProducts(filters: ProductFilters) = productDao.getFilteredProducts(
         categories = filters.selectedCategories,
+        categoriesEmpty = filters.selectedCategories.isEmpty(),
         brands = filters.selectedBrands,
+        brandsEmpty = filters.selectedBrands.isEmpty(),
         minPrice = filters.priceRange.start,
         maxPrice = filters.priceRange.endInclusive
     )
@@ -25,11 +27,36 @@ class ProductRepository(private val productDao: ProductDao) {
         }
     }
 
-    fun getAvailableCategories() = productDao.getUniqueCategories()
-    fun getAvailableBrands() = productDao.getUniqueBrands()
-    fun getPriceRange() = productDao.getPriceRange()
-        .map { range ->
-            if (range.min <= range.max) range else PriceRange(0.0, 0.0)
-        }
-        .map { it.toClosedRange() }
+    fun getAvailableFilters(filters: ProductFilters) = combine(
+        productDao.getAvailableCategories(
+            brands = filters.selectedBrands,
+            brandsEmpty = filters.selectedBrands.isEmpty(),
+            minPrice = filters.priceRange.start,
+            maxPrice = filters.priceRange.endInclusive
+        ),
+        productDao.getAvailableBrands(
+            categories = filters.selectedCategories,
+            categoriesEmpty = filters.selectedCategories.isEmpty(),
+            minPrice = filters.priceRange.start,
+            maxPrice = filters.priceRange.endInclusive
+        ),
+        productDao.getAvailablePriceRange(
+            categories = filters.selectedCategories,
+            categoriesEmpty = filters.selectedCategories.isEmpty(),
+            brands = filters.selectedBrands,
+            brandsEmpty = filters.selectedBrands.isEmpty()
+        )
+    ) { categories, brands, priceRange ->
+        AvailableFilters(
+            categories = categories,
+            brands = brands,
+            priceRange = priceRange.toClosedRange()
+        )
+    }
 }
+
+data class AvailableFilters(
+    val categories: List<String>,
+    val brands: List<String>,
+    val priceRange: ClosedFloatingPointRange<Double>
+)

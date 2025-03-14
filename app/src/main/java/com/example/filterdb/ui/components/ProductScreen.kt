@@ -25,7 +25,8 @@ import com.example.filterdb.data.ProductViewModel
 @Composable
 fun ProductScreen(viewModel: ProductViewModel) {
     val products by viewModel.products.collectAsState()
-    val priceRange by viewModel.priceRange.collectAsState()
+    val availableFilters by viewModel.availableFilters.collectAsState()
+    val currentFilters by viewModel.filters.collectAsState()
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Product Filter") }) }
@@ -33,7 +34,7 @@ fun ProductScreen(viewModel: ProductViewModel) {
         Column(modifier = Modifier.padding(padding)) {
             FilterPanel(
                 viewModel = viewModel,
-                modifier = Modifier.width(300.dp)
+//                modifier = Modifier.width(300.dp)
             )
             ProductList(products = products)
         }

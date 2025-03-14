@@ -1,10 +1,7 @@
 package com.example.filterdb.ui.components
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Text
@@ -12,111 +9,96 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.example.filterdb.data.ProductViewModel
 
 @Composable
-fun FilterPanel(
-    viewModel: ProductViewModel,
-    modifier: Modifier = Modifier
-) {
-    val availableCategories by viewModel.availableCategories.collectAsState()
-    val availableBrands by viewModel.availableBrands.collectAsState()
-    val filters by viewModel.filters.collectAsState()
-    val priceRange by viewModel.priceRange.collectAsState()
+fun FilterPanel(viewModel: ProductViewModel) {
+    val availableFilters by viewModel.availableFilters.collectAsState()
+    val currentFilters by viewModel.filters.collectAsState()
 
-    Column(modifier = modifier.padding(8.dp)) {
-        Text("Categories", style = MaterialTheme.typography.titleSmall)
-        FilterCheckboxGroup(
-            items = availableCategories,
-            selectedItems = filters.selectedCategories,
-            onSelectionChange = viewModel::updateCategories
+    Column {
+        // Категории
+        DynamicFilterSection(
+            title = "Categories",
+            allItems = availableFilters.categories,
+            selectedItems = currentFilters.selectedCategories,
+            onSelectionChanged = viewModel::updateCategories
         )
 
-        Text("Brands", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-        FilterCheckboxGroup(
-            items = availableBrands,
-            selectedItems = filters.selectedBrands,
-            onSelectionChange = viewModel::updateBrands
+        // Бренды
+        DynamicFilterSection(
+            title = "Brands",
+            allItems = availableFilters.brands,
+            selectedItems = currentFilters.selectedBrands,
+            onSelectionChanged = viewModel::updateBrands
         )
 
-        PriceFilterSection(
-            currentRange = filters.priceRange,
-            fullRange = priceRange,
-            onPriceChange = viewModel::updatePriceRange
+        // Ценовой диапазон
+        PriceRangeFilter(
+            currentRange = currentFilters.priceRange,
+            availableRange = availableFilters.priceRange,
+            onRangeChanged = viewModel::updatePriceRange
         )
     }
 }
 
 @Composable
-private fun PriceFilterSection(
+private fun PriceRangeFilter(
     currentRange: ClosedFloatingPointRange<Double>,
-    fullRange: ClosedFloatingPointRange<Double>,
-    onPriceChange: (ClosedFloatingPointRange<Double>) -> Unit
+    availableRange: ClosedFloatingPointRange<Double>,
+    onRangeChanged: (ClosedFloatingPointRange<Double>) -> Unit
 ) {
-    val fullRangeFloat = remember(fullRange) {
-        fullRange.start.toFloat()..fullRange.endInclusive.toFloat()
+    val sliderRange = availableRange.start.toFloat()..availableRange.endInclusive.toFloat()
+    val currentValues = remember(currentRange) {
+        currentRange.start.toFloat()..currentRange.endInclusive.toFloat()
     }
 
-    val isValidRange = remember(fullRange) {
-        fullRange.start <= fullRange.endInclusive
-    }
-
-    if (!isValidRange) {
-        return  // Не рендерим слайдер если диапазон невалидный
-    }
-
-    val sliderRange = remember(currentRange) {
-        if (currentRange.start <= currentRange.endInclusive) {
-            currentRange.start.toFloat()..currentRange.endInclusive.toFloat()
-        } else {
-            0f..0f
-        }
-    }
-
-    Column(modifier = Modifier.padding(top = 16.dp)) {
+    Column {
         Text("Price Range", style = MaterialTheme.typography.titleSmall)
+
         RangeSlider(
-            value = sliderRange,
-            onValueChange = { newRange ->
-                onPriceChange(newRange.start.toDouble()..newRange.endInclusive.toDouble())
+            value = currentValues,
+            onValueChange = { range ->
+                onRangeChanged(
+                    range.start.toDouble()..range.endInclusive.toDouble()
+                )
             },
-            valueRange = fullRangeFloat,
-            steps = 100,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            valueRange = sliderRange,
+            steps = 100
         )
-        Row(horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("$${"%.2f".format(sliderRange.start)}")
-            Text("$${"%.2f".format(sliderRange.endInclusive)}")
-        }
+
+        Text("From: $${currentRange.start.format(2)}")
+        Text("To: $${currentRange.endInclusive.format(2)}")
     }
 }
 
 @Composable
-fun FilterCheckboxGroup(
-    items: List<String>,
+private fun DynamicFilterSection(
+    title: String,
+    allItems: List<String>,
     selectedItems: List<String>,
-    onSelectionChange: (List<String>) -> Unit
+    onSelectionChanged: (List<String>) -> Unit
 ) {
     Column {
-        items.forEach { item ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 4.dp)
-            ) {
-                Checkbox(
-                    checked = selectedItems.contains(item),
-                    onCheckedChange = { checked ->
+        Text(title, style = MaterialTheme.typography.titleSmall)
+
+        if (allItems.isEmpty()) {
+            Text("No options available")
+        } else {
+            allItems.forEach { item ->
+                FilterChip(
+                    label = { Text(item) },
+                    selected = selectedItems.contains(item),
+                    onClick = {
                         val newSelection = selectedItems.toMutableList().apply {
-                            if (checked) add(item) else remove(item)
+                            if (contains(item)) remove(item) else add(item)
                         }
-                        onSelectionChange(newSelection)
+                        onSelectionChanged(newSelection)
                     }
                 )
-                Text(item)
             }
         }
     }
 }
+
+fun Double.format(decimals: Int) = "%.${decimals}f".format(this)
