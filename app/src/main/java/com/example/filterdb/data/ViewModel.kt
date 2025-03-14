@@ -35,9 +35,11 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = AvailableFilters(
-            categories = emptyList(),
-            brands = emptyList(),
-            priceRange = 0.0..0.0
+            allCategories = emptyList(),
+            allBrands = emptyList(),
+            availableCategories = emptyList(),
+            availableBrands = emptyList(),
+            priceRange = 0.0..0.0,
         )
     )
 

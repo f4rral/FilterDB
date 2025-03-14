@@ -27,7 +27,13 @@ class ProductRepository(private val productDao: ProductDao) {
         }
     }
 
+    fun getAllCategories() = productDao.getAllCategories()
+    fun getAllBrands() = productDao.getAllBrands()
+
     fun getAvailableFilters(filters: ProductFilters) = combine(
+        getAllCategories(),
+        getAllBrands(),
+
         productDao.getAvailableCategories(
             brands = filters.selectedBrands,
             brandsEmpty = filters.selectedBrands.isEmpty(),
@@ -46,17 +52,21 @@ class ProductRepository(private val productDao: ProductDao) {
             brands = filters.selectedBrands,
             brandsEmpty = filters.selectedBrands.isEmpty()
         )
-    ) { categories, brands, priceRange ->
+    ) { allCats, allBrands, availableCats, availableBrands, priceRange ->
         AvailableFilters(
-            categories = categories,
-            brands = brands,
+            allCategories = allCats,
+            availableCategories = availableCats,
+            allBrands = allBrands,
+            availableBrands = availableBrands,
             priceRange = priceRange.toClosedRange()
         )
     }
 }
 
 data class AvailableFilters(
-    val categories: List<String>,
-    val brands: List<String>,
+    val allCategories: List<String>,
+    val availableCategories: List<String>,
+    val allBrands: List<String>,
+    val availableBrands: List<String>,
     val priceRange: ClosedFloatingPointRange<Double>
 )

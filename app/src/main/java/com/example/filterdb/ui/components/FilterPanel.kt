@@ -1,7 +1,11 @@
 package com.example.filterdb.ui.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Text
@@ -9,6 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.example.filterdb.data.ProductViewModel
 
 @Composable
@@ -20,7 +27,8 @@ fun FilterPanel(viewModel: ProductViewModel) {
         // Категории
         DynamicFilterSection(
             title = "Categories",
-            allItems = availableFilters.categories,
+            allItems = availableFilters.allCategories,
+            availableItems = availableFilters.availableCategories,
             selectedItems = currentFilters.selectedCategories,
             onSelectionChanged = viewModel::updateCategories
         )
@@ -28,7 +36,8 @@ fun FilterPanel(viewModel: ProductViewModel) {
         // Бренды
         DynamicFilterSection(
             title = "Brands",
-            allItems = availableFilters.brands,
+            allItems = availableFilters.allBrands,
+            availableItems = availableFilters.availableBrands,
             selectedItems = currentFilters.selectedBrands,
             onSelectionChanged = viewModel::updateBrands
         )
@@ -72,31 +81,52 @@ private fun PriceRangeFilter(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DynamicFilterSection(
     title: String,
     allItems: List<String>,
+    availableItems: List<String>,
     selectedItems: List<String>,
     onSelectionChanged: (List<String>) -> Unit
 ) {
-    Column {
+    Column(modifier = Modifier.padding(8.dp)) {
         Text(title, style = MaterialTheme.typography.titleSmall)
+
+        FlowRow {
+            allItems.forEach { item ->
+                val isAvailable = availableItems.contains(item)
+                val isSelected = selectedItems.contains(item)
+
+                FilterChip(
+                    selected = isSelected,
+                    onClick = {
+                        if (isAvailable) {
+                            val newSelection = selectedItems.toMutableList().apply {
+                                if (contains(item)) remove(item) else add(item)
+                            }
+                            onSelectionChanged(newSelection)
+                        }
+                    },
+                    enabled = isAvailable,
+                    colors = FilterChipDefaults.filterChipColors(
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    ),
+                    label = {
+                        Text(
+                            text = item,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    modifier = Modifier.padding(4.dp)
+                )
+            }
+        }
 
         if (allItems.isEmpty()) {
             Text("No options available")
-        } else {
-            allItems.forEach { item ->
-                FilterChip(
-                    label = { Text(item) },
-                    selected = selectedItems.contains(item),
-                    onClick = {
-                        val newSelection = selectedItems.toMutableList().apply {
-                            if (contains(item)) remove(item) else add(item)
-                        }
-                        onSelectionChanged(newSelection)
-                    }
-                )
-            }
         }
     }
 }

@@ -69,4 +69,10 @@ interface ProductDao {
 
     @Query("SELECT COUNT(*) FROM products")
     suspend fun getProductsCount(): Int
+
+    @Query("SELECT DISTINCT category FROM products")
+    fun getAllCategories(): Flow<List<String>>
+
+    @Query("SELECT DISTINCT brand FROM products")
+    fun getAllBrands(): Flow<List<String>>
 }
