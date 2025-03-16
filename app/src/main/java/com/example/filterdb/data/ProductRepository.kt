@@ -1,9 +1,10 @@
 package com.example.filterdb.data
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 class ProductRepository(private val productDao: ProductDao) {
-    fun getFilteredProducts(filters: ProductFilters) = productDao.getFilteredProducts(
+    fun getFilteredProducts(filters: ProductFilter) = productDao.getFilteredProducts(
         categories = filters.selectedCategories,
         categoriesEmpty = filters.selectedCategories.isEmpty(),
         brands = filters.selectedBrands,
@@ -27,41 +28,45 @@ class ProductRepository(private val productDao: ProductDao) {
         }
     }
 
-    fun getAllCategories() = productDao.getAllCategories()
-    fun getAllBrands() = productDao.getAllBrands()
-
-    fun getAvailableFilters(filters: ProductFilters) = combine(
-        getAllCategories(),
-        getAllBrands(),
-
-        productDao.getAvailableCategories(
-            brands = filters.selectedBrands,
-            brandsEmpty = filters.selectedBrands.isEmpty(),
-            minPrice = filters.priceRange.start,
-            maxPrice = filters.priceRange.endInclusive
-        ),
-        productDao.getAvailableBrands(
-            categories = filters.selectedCategories,
-            categoriesEmpty = filters.selectedCategories.isEmpty(),
-            minPrice = filters.priceRange.start,
-            maxPrice = filters.priceRange.endInclusive
-        ),
-        productDao.getAvailablePriceRange(
-            categories = filters.selectedCategories,
-            categoriesEmpty = filters.selectedCategories.isEmpty(),
-            brands = filters.selectedBrands,
-            brandsEmpty = filters.selectedBrands.isEmpty()
-        )
-    ) { allCats, allBrands, availableCats, availableBrands, priceRange ->
-        AvailableFilters(
-            allCategories = allCats,
-            availableCategories = availableCats,
-            allBrands = allBrands,
-            availableBrands = availableBrands,
-            priceRange = priceRange.toClosedRange()
-        )
+    fun getAvailableFilters(filter: ProductFilter): Flow<AvailableFilters> {
+        return combine(
+            productDao.getAllCategories(),
+            productDao.getAllBrands(),
+            productDao.getAvailableCategories(
+                brands = filter.selectedBrands,
+                brandsEmpty = filter.selectedBrands.isEmpty(),
+                minPrice = filter.priceRange.start,
+                maxPrice = filter.priceRange.endInclusive
+            ),
+            productDao.getAvailableBrands(
+                categories = filter.selectedCategories,
+                categoriesEmpty = filter.selectedCategories.isEmpty(),
+                minPrice = filter.priceRange.start,
+                maxPrice = filter.priceRange.endInclusive
+            ),
+            productDao.getAvailablePriceRange(
+                categories = filter.selectedCategories,
+                categoriesEmpty = filter.selectedCategories.isEmpty(),
+                brands = filter.selectedBrands,
+                brandsEmpty = filter.selectedBrands.isEmpty()
+            )
+        ) { allCategories, allBrands, availableCats, availableBrands, priceRange ->
+            AvailableFilters(
+                allCategories = allCategories,
+                availableCategories = availableCats,
+                allBrands = allBrands,
+                availableBrands = availableBrands,
+                priceRange = priceRange.toClosedRange()
+            )
+        }
     }
 }
+
+data class ProductFilter(
+    val selectedCategories: List<String> = emptyList(),
+    val selectedBrands: List<String> = emptyList(),
+    val priceRange: ClosedFloatingPointRange<Double> = 0.0..0.0
+)
 
 data class AvailableFilters(
     val allCategories: List<String>,

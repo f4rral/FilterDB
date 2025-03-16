@@ -11,15 +11,36 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class ProductFilters(
-    val selectedCategories: List<String> = emptyList(),
-    val selectedBrands: List<String> = emptyList(),
-    val priceRange: ClosedFloatingPointRange<Double> = 0.0..0.0
-)
-
 class ProductViewModel(private val repository: ProductRepository) : ViewModel() {
-    private val _filters = MutableStateFlow(ProductFilters())
-    val filters: StateFlow<ProductFilters> = _filters.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.getAvailableFilters(ProductFilter()).collect { filters ->
+                _filters.update {
+                    it.copy(priceRange = filters.priceRange)
+                }
+            }
+        }
+    }
+
+    private val _filters = MutableStateFlow(ProductFilter())
+    val filters: StateFlow<ProductFilter> = _filters.asStateFlow()
+
+    val availableFilters = _filters
+        .flatMapLatest { filters ->
+            repository.getAvailableFilters(filters)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = AvailableFilters(
+                allCategories = emptyList(),
+                allBrands = emptyList(),
+                availableCategories = emptyList(),
+                availableBrands = emptyList(),
+                priceRange = 0.0..0.0,
+            )
+        )
 
     val products = _filters.flatMapLatest { filters ->
         repository.getFilteredProducts(filters)
@@ -28,28 +49,6 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
-
-    val availableFilters = _filters.flatMapLatest { filters ->
-        repository.getAvailableFilters(filters)
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = AvailableFilters(
-            allCategories = emptyList(),
-            allBrands = emptyList(),
-            availableCategories = emptyList(),
-            availableBrands = emptyList(),
-            priceRange = 0.0..0.0,
-        )
-    )
-
-    init {
-        viewModelScope.launch {
-            repository.getAvailableFilters(ProductFilters()).collect { filters ->
-                _filters.update { it.copy(priceRange = filters.priceRange) }
-            }
-        }
-    }
 
     fun updateCategories(categories: List<String>) {
         _filters.update { it.copy(selectedCategories = categories) }

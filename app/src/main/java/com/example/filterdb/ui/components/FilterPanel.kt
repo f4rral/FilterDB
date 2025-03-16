@@ -67,13 +67,13 @@ private fun PriceRangeFilter(
 
         RangeSlider(
             value = currentValues,
+            valueRange = sliderRange,
+            steps = 100,
             onValueChange = { range ->
                 onRangeChanged(
                     range.start.toDouble()..range.endInclusive.toDouble()
                 )
             },
-            valueRange = sliderRange,
-            steps = 100
         )
 
         Text("From: $${currentRange.start.format(2)}")
